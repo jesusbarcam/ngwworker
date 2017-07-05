@@ -1,5 +1,7 @@
 import{ Component } from '@angular/core';
 import{ Ng2WebWorker } from './lib/ng2WebWorker';
+import{ PDFJS } from 'pdfjs-dist';
+
 
 @Component({
   selector: 'app-root',
@@ -9,8 +11,9 @@ import{ Ng2WebWorker } from './lib/ng2WebWorker';
 export class AppComponent {
   
 
-
-
+  private checkIfThreadIsBlock() {
+    console.log("MAIN THREAD OF BROWSER NOT BLOCKED!!!!!");
+  }
 
   /**
    * @private
@@ -23,15 +26,50 @@ export class AppComponent {
     let ngWorker:Ng2WebWorker = this.createWebWorker();
     this.workerListener( ngWorker );
 
-    //var pdfjsString = JSON.stringify( PDFJS );
     let test:any = {
       name:'Salchicha',
       type:'carne'
     }
 
+    let moreTest:any = {
+      name:'Filete',
+      type:'carne'
+    };
+
+
+    var options = options || { scale: 1 };
+        
+
+    function renderPage(page) {
+        var viewport = page.getViewport(options.scale);
+        var canvasContainer = document.getElementById('pdfs-container');
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        var renderContext = {
+          canvasContext: ctx,
+          viewport: viewport
+        };
+        
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        canvasContainer.appendChild(canvas);
+        
+        page.render(renderContext);
+    }
+    
+
+
+    function renderPages(pdfDoc) {
+        for(var num = 1; num <= pdfDoc.numPages; num++)
+            pdfDoc.getPage(num).then(renderPage);
+    }
+    
+    PDFJS.disableWorker = false;
+    PDFJS.getDocument("../assets/documents/exampleDocument.pdf").then( renderPages );
+
     //start to work, send all parameters that 
     //worker code need 
-    ngWorker.run({test:test});
+    //ngWorker.run({test:test,pdfjs:moreTest});
 
   }//startWebworker
   
@@ -61,8 +99,12 @@ export class AppComponent {
   private createWebWorker():Ng2WebWorker {
     //Creamos un worker!
     return new Ng2WebWorker((args:any,self:any) => {
-      var test = args;
-      console.log("inside of worker: " + test );
+
+      let { test,pdfjs } = args.data;
+
+      //console.log("INSIDE OF WORKER DATA: " , data );
+      console.log("INSIDE OF WORKER TEST: ", test);
+      console.log("INSIDE OF WORKER MORE PDFJS: ", pdfjs);
       //self.postMessage("INIT WEBWORKER! " + args );
 
       // var aux = args.data.pdfjs;
